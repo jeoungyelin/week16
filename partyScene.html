@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>파티 이동 & 파티장</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Single+Day&display=swap" rel="stylesheet">
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:100vw;height:100vh;overflow:hidden;background:#000;}
+
+  #transitionScreen{
+    position:absolute;width:100%;height:100%;
+    background:url("Frame 2087327012.png") no-repeat center/cover;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    font-family:'Single Day',cursive;z-index:5;
+  }
+
+  #transitionText{
+    font-size:40px;color:#FFB7F2;
+    text-shadow:-2px 0 #FF3CC2,2px 0 #FF3CC2,0 2px #FF3CC2,0 -2px #FF3CC2;
+  }
+
+  #partyScreen{
+    display:none;position:absolute;width:100%;height:100%;overflow:hidden;
+  }
+
+  #partyBg{
+    position:absolute;width:100%;height:100%;object-fit:cover;
+  }
+
+  #playerChar{
+    position:absolute;width:120px;
+    bottom:40px;left:50%;transform:translateX(-50%);
+    z-index:10;
+  }
+
+  .npc{
+    position:absolute;width:110px;z-index:8;
+  }
+
+    /* 🔥 원빈 실사 이미지 */
+  #introBinImg{
+    position:absolute;
+    width:420px;
+    right:50%; top:0%;
+    transform:translateX(50%);
+    z-index:20;
+    display:none;
+  }
+
+  .dialogueBox{
+    position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
+    width:95%;max-width:1400px;height:200px;padding:25px 30px;
+    background:linear-gradient(90deg,#FFE9FD,#fff);
+    border-radius:20px;outline:3px dotted #E300EE;outline-offset:-5px;
+    box-shadow:-2 0 10px 4px rgba(212,0,183,1);
+    font-family:'Single Day',cursive;cursor:pointer;
+    display:none;flex-direction:column;z-index:20;
+  }
+
+  #dialogueName{
+    font-size:30px;font-weight:bold;color:#fff;
+    text-shadow:-3px 0 #E300EE,3px 0 #E300EE,0 -3px #E300EE,0 3px #E300EE,
+                -3px -3px #E300EE,-3px 3px #E300EE,3px -3px #E300EE,3px 3px #E300EE;
+    margin-bottom:8px;white-space:nowrap;
+  }
+
+  #dialogueText{
+    font-size:25px;color:#FF00BB;line-height:1.5;
+    white-space:normal;word-break:keep-all;
+  }
+
+  /* ======================= */
+  /* ✅ 귀가 컷신(영상 오버레이) */
+  /* ======================= */
+
+  #goHomeScreen{
+    display:none;
+    position:absolute;
+    width:100%;height:100%;
+    overflow:hidden;
+    z-index:30; /* party 위로 */
+  }
+
+  /* ✅ 화면을 덮는 영상 */
+  #goHomeVideo{
+    position:absolute;
+    left:0; top:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    z-index:1;
+  }
+
+  /* ✅ 영상 위 캐릭터 */
+  #goHomePlayer{
+    position:absolute;
+    width:540px;   /* 여기서 크기 조절 */
+    left:18%;      /* 여기서 위치 조절 */
+    top:0px;   /* 여기서 위치 조절 */
+    z-index:5;
+    image-rendering: pixelated;
+  }
+
+  /* ✅ 귀가 컷신 전용 대화창은 기존 dialogueBox를 그대로 쓰되 */
+  #goHomeDialogue{
+    z-index:10;
+  }
+
+    /* ✅ 귀가 컷신 대화 이름/텍스트를 기존 대화창과 동일하게 */
+  #goHomeName{
+    font-size:30px;font-weight:bold;color:#fff;
+    text-shadow:-3px 0 #E300EE,3px 0 #E300EE,0 -3px #E300EE,0 3px #E300EE,
+                -3px -3px #E300EE,-3px 3px #E300EE,3px -3px #E300EE,3px 3px #E300EE;
+    margin-bottom:8px;white-space:nowrap;
+  }
+
+  #goHomeText{
+    font-size:25px;color:#FF00BB;line-height:1.5;
+    white-space:normal;word-break:keep-all;
+  }
+
+  /* 🫨 귀가 캐릭터 바들바들 */
+@keyframes shiver {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(-0.4px, 0.4px) rotate(-0.2deg); }
+  50%  { transform: translate(0.4px, -0.4px) rotate(0.2deg); }
+  75%  { transform: translate(-0.3px, 0px) rotate(-0.15deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+#goHomePlayer.shiver {
+  animation: shiver 0.22s infinite;
+  transform-origin: 50% 80%;
+}
+
+/* 접근성 옵션 */
+@media (prefers-reduced-motion: reduce) {
+  #goHomePlayer.shiver { animation: none; }
+}
+
+  /* 혼잣말 전용(같은 dialogueBox 재사용) */
+
+</style>
+</head>
+
+<body>
+
+<div id="transitionScreen">
+  <div id="transitionText">파티장으로 이동 중…</div>
+</div>
+
+<div id="partyScreen">
+  <img id="partyBg" src="Frame 2087327013.png">
+  <img id="playerChar" src="kingzzang__very_tiny_pixel_art_sprite_16x16_pixel_character_ext_b71ac461-14bb-4569-a979-122d07f13139.png" style="left:320px;bottom:120px;">
+
+  <!-- pixel NPC들 (2 여자 + 1 남자 + 원빈) -->
+  <img id="npc1" class="npc" src="Group 2085666449.png" style="right:4%;bottom:60px;">
+  <img id="npc2" class="npc" src="kingzzangtiny.png" style="left:73%;top:100px;width:150px;">
+  <img id="npc3" class="npc" src="kingzzangultra.png"   style="left:28%;bottom:470px;width:125px;">
+  <img id="npcBin" class="npc" src="Group 2085666450.png"  style="left:12%;bottom:120px;">
+
+  <img id="introBinImg" src="Group 2085666447.png">
+
+  <!-- 대화 중 NPC 이미지 표시 -->
+<img id="dialogueCharImg" style="
+  position:absolute;
+  right:50px;
+  bottom:250px;
+  width:350px;
+  z-index:19;
+  display:none;
+">
+
+  <!-- 대화창 -->
+  <div id="dialogueBox" class="dialogueBox">
+    <div id="dialogueName"></div>
+    <div id="dialogueText"></div>
+  </div>
+
+</div>
+
+<!-- ======================= -->
+<!-- ✅ 귀가 컷신(영상 덮기 + 혼잣말) -->
+<!-- ======================= -->
+<div id="goHomeScreen">
+
+  <!-- ✅ 화면을 덮는 영상(파일명만 너 영상으로 바꿔) -->
+  <video id="goHomeVideo" src="kjh.mp4" autoplay muted playsinline loop></video>
+
+  <!-- ✅ 영상 위 캐릭터 이미지(정지 컷이면 더 좋음) -->
+  <img id="goHomePlayer" src="Group 2085666455 (1).png" alt="">
+
+  <!-- ✅ 혼잣말 대화창 -->
+  <div id="goHomeDialogue" class="dialogueBox" style="display:flex;">
+    <div id="goHomeName"></div>
+    <div id="goHomeText"></div>
+  </div>
+
+</div>
+
+  <!-- 🔊 파티 BGM -->
+<audio id="partyBgm" loop preload="auto">
+  <source src="zombie-party-time-124560 (1).mp3" type="audio/mpeg">
+</audio>
+
+<!-- 🔊 파티 BGM 2 (추가) -->
+<audio id="partyBgm2" loop preload="auto">
+  <source src="house-party-inside-voices-talking-10-62063 (1).mp3" type="audio/mpeg">
+</audio>
+
+<!-- 👣 이동 효과음 -->
+<audio id="walkSfx" src="walking-in-heels-95578.mp3" preload="auto"></audio>
+
+<!-- 🏠 귀가 BGM -->
+<audio id="goHomeBgm" loop preload="auto">
+  <source src="passing-car-393073 (1).mp3" type="audio/mpeg">
+</audio>
+
+<!-- ✨ 귀가 첫 클릭 효과음 -->
+<audio id="goHomeFirstClickSfx" preload="auto">
+  <source src="crying-411854 (1).mp3" type="audio/mpeg">
+</audio>
+
+<script>
+  /* =======================
+   🔊 파티 BGM: 첫 클릭/키입력에 자동 시작
+======================= */
+const partyBgm  = document.getElementById("partyBgm");
+const partyBgm2 = document.getElementById("partyBgm2");
+
+let isPartyBgmPlaying = false;
+
+// ✅ 파티 BGM 2개 동시에 재생
+function playBothPartyBgm() {
+  if (partyBgm) {
+    partyBgm.pause();
+    partyBgm.currentTime = 0;
+    partyBgm.play().catch(()=>{});
+  }
+  if (partyBgm2) {
+    partyBgm2.pause();
+    partyBgm2.currentTime = 0;
+    partyBgm2.play().catch(()=>{});
+  }
+}
+
+// ✅ 파티 BGM 2개 동시에 정지
+function stopBothPartyBgm() {
+  [partyBgm, partyBgm2].forEach(a => {
+    if (!a) return;
+    a.pause();
+    a.currentTime = 0;
+  });
+}
+
+// ✅ 첫 상호작용에서 한 번만 자동 시작
+function tryAutoPlayPartyBgm() {
+  if (isPartyBgmPlaying) return;
+
+  playBothPartyBgm();
+  isPartyBgmPlaying = true;
+
+  document.removeEventListener("pointerdown", tryAutoPlayPartyBgm);
+  document.removeEventListener("keydown", tryAutoPlayPartyBgm);
+  document.removeEventListener("touchstart", tryAutoPlayPartyBgm);
+}
+
+// ✅ 화면 어디든 "처음" 상호작용 시 BGM 재생
+document.addEventListener("pointerdown", tryAutoPlayPartyBgm, { once: true });
+document.addEventListener("keydown", tryAutoPlayPartyBgm, { once: true });
+document.addEventListener("touchstart", tryAutoPlayPartyBgm, { once: true });
+
+const transitionScreen = document.getElementById("transitionScreen");
+const partyScreen = document.getElementById("partyScreen");
+const introBinImg = document.getElementById("introBinImg");
+const playerName = localStorage.getItem("playerName") || "플레이어";
+
+/* 전환 종료 → 파티장 등장 */
+setTimeout(()=>{
+  transitionScreen.style.display="none";
+  partyScreen.style.display="block";
+  startIntro();
+},1500);
+
+/* =======================
+   👣 이동 효과음
+======================= */
+const walkSfx = document.getElementById("walkSfx");
+
+// 연타/키보드 반복 입력때 너무 시끄럽지 않게 쿨타임
+let lastWalkSfxTime = 0;
+const WALK_SFX_COOLDOWN = 120; // ms
+
+function playWalkSfx() {
+  if (!walkSfx) return;
+
+  const now = performance.now();
+  if (now - lastWalkSfxTime < WALK_SFX_COOLDOWN) return;
+  lastWalkSfxTime = now;
+
+  walkSfx.pause();
+  walkSfx.currentTime = 0;
+  walkSfx.play().catch(()=>{});
+}
+
+/* ======================= */
+/* 원빈 첫 대화 (룰 설명) */
+/* ======================= */
+const dialogueBox=document.getElementById("dialogueBox");
+const dialogueName=document.getElementById("dialogueName");
+const dialogueText=document.getElementById("dialogueText");
+
+let introIndex=0;
+const introLines=[
+  {name:"원빈",text:`${playerName}, 파티에 온 걸 환영해.`},
+  {name:"원빈",text:"여기 친구들이 있어. 가서 대화를 해봐."},
+  {name:"원빈",text:"모든 사람과 대화한 후 다시 나에게 와."}
+];
+
+function startIntro(){
+  introBinImg.style.display = "block";
+  dialogueBox.style.display="flex";
+  showIntroLine();
+}
+
+function showIntroLine(){
+  dialogueName.textContent=introLines[introIndex].name;
+  dialogueText.textContent=introLines[introIndex].text;
+}
+
+dialogueBox.onclick=()=>{
+  introIndex++;
+  if(introIndex>=introLines.length){
+    introBinImg.style.display="none";
+    dialogueBox.style.display="none";
+    enableMovement();
+    return;
+  }
+  showIntroLine();
+};
+
+/* ======================= */
+/* 이동 기능 (★ 수정 완료) */
+/* ======================= */
+const player=document.getElementById("playerChar");
+
+/* ★ CSS에서 설정한 px 값을 정확히 읽어오기 */
+let px = parseInt(window.getComputedStyle(player).left);
+let py = parseInt(window.getComputedStyle(player).bottom);
+
+/* 이동 활성화 */
+function enableMovement(){
+  document.addEventListener("keydown", movePlayer);
+}
+
+/* 이동 함수 */
+function movePlayer(e){
+  const step = 30;
+
+  // 대화 중 이동 막기
+  if (isDialogueOpen) return;
+
+  let moved = false;
+
+  if(e.key==="ArrowLeft")  { px -= step; moved = true; }
+  if(e.key==="ArrowRight") { px += step; moved = true; }
+  if(e.key==="ArrowUp")    { py += step; moved = true; }
+  if(e.key==="ArrowDown")  { py -= step; moved = true; }
+
+  if (!moved) return;
+
+  player.style.left = px + "px";
+  player.style.bottom = py + "px";
+
+  playWalkSfx();
+  checkNPC();
+}
+
+/* ======================= */
+/* NPC 대화 데이터 (선택지 추가) */
+/* ======================= */
+const npcDialogues = {
+  
+  npc1: [
+    { name: "여자아이1", text: "안녕 반가워 처음 보는 얼굴이네", img: "ki0a8e92.png" },
+    { name: "여자아이1", text: "근데 너 오늘 그렇게 입고 온 거야?", img: "ki0a8e92.png" },
+    { type: "choice",
+      choices: [
+        { image: "choice1.png",
+          response: "너 몸선이 이상하게 보여. 옷 핏 때문이 아니라 그냥… 원래 그런 체형?" 
+        },
+        { 
+          image: "choice2.png",
+          response: "거울 보고 나온 거 맞지? 우리 사진은 절대 같이 찍지 말자." 
+        }
+      ],
+      img: "ki0a8e92.png"
+    },
+    { name: "여자아이1", text: "그래... 여튼 반가웠어", img: "ki0a8e92.png" }
+  ],
+  
+  npc2: [
+    { name: "여자아이2", text: "너 파티 처음 오는구나?", img: "ki.png" },
+    { name: "여자아이2", text: "음… 나 같으면 위랑 아래는 바꿨을 것 같아.", img: "ki.png" },
+    { 
+      type: "choice",
+      choices: [
+        { image: "choice3.png",
+          response: "얼굴이 너무 흐릿해서 누군지도 몰랐어. 지나가는 배경인 줄."},
+        {  image: "choice4.png",
+          response: "난 널 위해 진심으로 하는 충고였는데, 왜 화를 내고 그래" }
+      ],
+      img: "ki.png"},
+    { name: "여자아이2", text: "널 위해 하는 말이야... 다음부터는 화장이라도 귀엽게 하고 와", img: "ki.png" }
+  ],
+  
+  npc3: [
+    { name: "남자아이", text: "음… 너 처음 보는 얼굴인데?", img: "71e-6b.png" },
+    // 🔹 선택지 추가
+    { 
+      type: "choice",
+      choices: [
+        { 
+          image: "choice5.png",
+          response: "피부 왜 그래? 조명 때문이 아니고 그냥 상태가 안 좋아 보여." 
+        },
+        {  
+          image: "choice6.png",
+          response: "진짜 모르겠어서 묻는 건데… 오늘 꾸민 거 맞아? 솔직히 구별이 안 돼." 
+        }
+      ],
+      img: "71e-6b.png"
+    },
+    { name: "남자아이", text: "그 촌스러운 옷차림으로는 나랑 붙어다닐 생각하지 않는 게 좋을 거야 ", img: "71e-6b.png" }
+  ],
+  npcBin: [
+    { name: "원빈", text: "미안한데 너랑 더 이상 못있겠다.", img: "Group 2085666447.png" },
+    { name: "원빈", text: "그 촌스러운 옷스타일이랑, 너희 엄마가 해준 것 같은 화장 더이상 못 봐주겠어", img: "Group Group 2085666447.png" }
+  ]
+};
+
+/* ======================= */
+/* 🔹 선택지 표시 함수 (수정) */
+/* ======================= */
+function showChoices(choiceData) {
+  const existingChoices = document.getElementById("choicesContainer");
+  if (existingChoices) existingChoices.remove();
+
+  const choicesContainer = document.createElement("div");
+  choicesContainer.id = "choicesContainer";
+  choicesContainer.style.cssText = `
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 25;
+    align-items: center;
+    justify-content: center;
+  `;
+
+  choiceData.choices.forEach((choice) => {
+    const btnWrapper = document.createElement("div");
+    btnWrapper.style.cssText = `
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    `;
+
+    const img = document.createElement("img");
+    img.src = choice.image;
+    img.style.cssText = `
+      width: 600px;
+      height: auto;
+      display: block;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    `;
+
+    btnWrapper.appendChild(img);
+
+    btnWrapper.onmouseover = () => {
+      img.style.transform = "scale(1.1)";
+      img.style.boxShadow = "0 6px 20px rgba(255, 0, 187, 0.4)";
+    };
+
+    btnWrapper.onmouseout = () => {
+      img.style.transform = "scale(1)";
+      img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.2)";
+    };
+
+    btnWrapper.onclick = () => {
+      // 🔹 선택지 다음 라인을 찾기
+      let nextLineIndex = lineIndex + 1;
+      let nextLine = currentLines[nextLineIndex];
+      
+      // NPC 응답 표시
+      dialogueName.textContent = nextLine ? nextLine.name : "???";  // ← NPC 이름 표시
+      dialogueText.textContent = choice.response;                    // ← NPC 대사
+      dialogueBox.style.display = "flex";
+      choicesContainer.remove();
+
+      lineIndex = nextLineIndex - 1;
+
+      dialogueBox.onclick = continueDialogue;
+    };
+
+    choicesContainer.appendChild(btnWrapper);
+  });
+
+  document.getElementById("partyScreen").appendChild(choicesContainer);
+}
+
+/* ======================= */
+/* NPC 대화 시작 (수정) */
+/* ======================= */
+let currentLines = [];
+let lineIndex = 0;
+let isDialogueOpen = false;
+let currentNpcId = null;
+
+function startNPCDialogue(npcId) {
+  if (isDialogueOpen) return;
+  
+  isDialogueOpen = true;
+  currentNpcId = npcId;
+  currentLines = npcDialogues[npcId] || [];
+  lineIndex = 0;
+
+  if (currentLines.length === 0) return;
+
+  dialogueBox.style.display = "flex";
+  const dialogueCharImg = document.getElementById("dialogueCharImg");
+  dialogueCharImg.style.display = "block";
+
+  showNextLine();
+}
+/* ======================= */
+/* 🔹 NPC별 이미지 설정 (크기, 위치) */
+/* ======================= */
+const npcImageSettings = {
+  npc1: {
+    width: "380px",      // 여자아이1 - 이미지 너비
+    right: "640px",       // 여자아이1 - 오른쪽 거리
+    bottom: "0px"      // 여자아이1 - 아래 거리
+  },
+  npc2: {
+    width: "600px",      // 여자아이2 - 이미지 너비
+    right: "0px",      // 여자아이2 - 오른쪽 거리
+    bottom: "0px"      // 여자아이2 - 아래 거리
+  },
+  npc3: {
+    width: "420px",      // 남자아이 - 이미지 너비
+    right: "1070px",       // 남자아이 - 오른쪽 거리
+    bottom: "-570px"      // 남자아이 - 아래 거리
+  },
+  npcBin: {
+    width: "350px",      // 원빈 - 이미지 너비
+    right: "50px",       // 원빈 - 오른쪽 거리
+    bottom: "0px"      // 원빈 - 아래 거리
+  }
+};
+
+/* ======================= */
+/* showNextLine() 함수 수정 */
+/* ======================= */
+function showNextLine() {
+  const currentLine = currentLines[lineIndex];
+
+  // 선택지 타입인 경우
+  if (currentLine.type === "choice") {
+    const dialogueCharImg = document.getElementById("dialogueCharImg");
+    dialogueCharImg.src = currentLine.img;
+    
+    // 🔹 선택지 시 NPC 설정 적용
+    const settings = npcImageSettings[currentNpcId];
+    if (settings) {
+      dialogueCharImg.style.width = settings.width;
+      dialogueCharImg.style.right = settings.right;
+      dialogueCharImg.style.bottom = settings.bottom;
+    }
+    
+    dialogueBox.style.display = "none";
+    showChoices(currentLine);
+    return;
+  }
+
+  // 일반 대사
+  dialogueName.textContent = currentLine.name;
+  dialogueText.textContent = currentLine.text;
+
+  const dialogueCharImg = document.getElementById("dialogueCharImg");
+  dialogueCharImg.src = currentLine.img;
+  
+  // 🔹 이미지 설정 적용 (currentNpcId 사용)
+  const settings = npcImageSettings[currentNpcId];
+  if (settings) {
+    dialogueCharImg.style.width = settings.width;
+    dialogueCharImg.style.right = settings.right;
+    dialogueCharImg.style.bottom = settings.bottom;
+  }
+
+  dialogueBox.onclick = continueDialogue;
+}
+
+// 🔹 새로운 함수 추가
+function continueDialogue() {
+  lineIndex++;
+
+  if (lineIndex >= currentLines.length) {
+    dialogueBox.style.display = "none";
+    document.getElementById("dialogueCharImg").style.display = "none";
+    dialogueBox.onclick = null;
+    isDialogueOpen = false;
+    currentNpcId = null;
+    checkAllTalked();
+    return;
+  }
+
+  showNextLine();
+}
+
+/* ======================= */
+/* NPC 리스트 (원빈 제외)    */
+/* ======================= */
+const npcs = [
+  { id: "npc1", name: "여자아이1" },
+  { id: "npc2", name: "여자아이2" },
+  { id: "npc3", name: "남자아이" }
+];
+
+/* ======================= */
+/* 대화 상태 추적            */
+/* ======================= */
+const talked = {
+  npc1: false,
+  npc2: false,
+  npc3: false,
+  npcBin: false
+};
+
+/* ======================= */
+/* NPC 접촉 감지             */
+/* ======================= */
+const interactionDistance = -20;
+
+function checkNPC() {
+  npcs.forEach(n => {
+    const npcEl = document.getElementById(n.id);
+    if (!npcEl) return;
+
+    const npcRect = npcEl.getBoundingClientRect();
+    const pRect = player.getBoundingClientRect();
+
+    const near = !(
+      pRect.right < npcRect.left - interactionDistance ||
+      pRect.left > npcRect.right + interactionDistance ||
+      pRect.bottom < npcRect.top - interactionDistance ||
+      pRect.top > npcRect.bottom + interactionDistance
+    );
+
+    if (near && !talked[n.id]) {
+      talked[n.id] = true;
+      startNPCDialogue(n.id);
+      checkAllTalked();
+    }
+  });
+
+  // 🔹 원빈은 따로 처리
+  if (talked.npc1 && talked.npc2 && talked.npc3 && !talked.npcBin) {
+    const npcBinEl = document.getElementById("npcBin");
+    if (!npcBinEl) return;
+
+    const npcBinRect = npcBinEl.getBoundingClientRect();
+    const pRect = player.getBoundingClientRect();
+
+    const near = !(
+      pRect.right < npcBinRect.left - interactionDistance ||
+      pRect.left > npcBinRect.right + interactionDistance ||
+      pRect.bottom < npcBinRect.top - interactionDistance ||
+      pRect.top > npcBinRect.bottom + interactionDistance
+    );
+
+    if (near && !talked.npcBin) {
+      talked.npcBin = true;
+      startNPCDialogue("npcBin");
+      checkAllTalked();
+    }
+  }
+}
+
+/* ======================= */
+/* 모두 대화 완료 확인        */
+/* ======================= */
+function checkAllTalked() {
+  if (talked.npc1 && talked.npc2 && talked.npc3 && talked.npcBin) {
+    finalCutscene();
+  }
+}
+
+/* ======================= */
+/* 마지막 컷신 (수정)         */
+/* ======================= */
+function finalCutscene() {
+  setTimeout(() => {
+    // 🔹 원빈의 마지막 대사들
+    const binFinalLines = [
+      `미안한데, ${playerName}. 파티는 다 즐겼어?`,
+      "그 촌스러운 옷스타일이랑, 너희 엄마가 해준 것 같은 화장 더이상 못 봐주겠어",
+      "이제 집으로 가주면 좋겠어"
+    ];
+
+    let finalLineIndex = 0;
+
+    dialogueBox.style.display = "flex";
+    const dialogueCharImg = document.getElementById("dialogueCharImg");
+    dialogueCharImg.src = "Group 2085666447.png";
+    dialogueCharImg.style.display = "block";
+
+    // 첫 번째 대사 표시
+    dialogueName.textContent = "원빈";
+    dialogueText.textContent = binFinalLines[finalLineIndex];
+
+    // 클릭하면 다음 대사로 진행
+    dialogueBox.onclick = () => {
+      finalLineIndex++;
+
+      if (finalLineIndex >= binFinalLines.length) {
+        // 🔹 마지막 대사 후 종료
+        dialogueBox.style.display = "none";
+        dialogueCharImg.style.display = "none";
+        dialogueBox.onclick = null;
+
+        startGoHomeCutscene();
+        return;
+      }
+
+      // 다음 대사 표시
+      dialogueText.textContent = binFinalLines[finalLineIndex];
+    };
+  }, 500);
+}
+
+/* ======================= */
+/* ✅ 귀가 컷신 DOM */
+const goHomeScreen   = document.getElementById("goHomeScreen");
+const goHomePlayer   = document.getElementById("goHomePlayer");
+const goHomeDialogue = document.getElementById("goHomeDialogue");
+const goHomeName     = document.getElementById("goHomeName");
+const goHomeText     = document.getElementById("goHomeText");
+
+const goHomeBgm = document.getElementById("goHomeBgm");
+const goHomeFirstClickSfx = document.getElementById("goHomeFirstClickSfx");
+
+/* ✅ 귀가 BGM */
+function playGoHomeBgm(){
+  if (!goHomeBgm) return;
+  goHomeBgm.pause();
+  goHomeBgm.currentTime = 0;
+  goHomeBgm.play().catch(()=>{});
+}
+
+/* ✅ 귀가 대화창 클릭 효과음 */
+function playGoHomeFirstClickSfx(){
+  if (!goHomeFirstClickSfx) return;
+  goHomeFirstClickSfx.pause();
+  goHomeFirstClickSfx.currentTime = 0;
+  goHomeFirstClickSfx.play().catch(()=>{});
+}
+
+/* ======================= */
+/* ✅ 혼잣말 라인 */
+const goHomeLines = [
+  { name: playerName, text: "집에 가서 다시 옷을 갈아입자." },
+  { name: playerName, text: "다시 파티에 가야겠어." },
+  { name: playerName, text: "예쁜 옷으로 다시 갈아입으면 친구들이 날 좋아할지도 몰라." }
+];
+
+let goHomeIdx = 0;
+
+function showGoHomeLine(){
+  goHomeName.textContent = goHomeLines[goHomeIdx].name;
+  goHomeText.textContent = goHomeLines[goHomeIdx].text;
+}
+
+/* ======================= */
+/* ✅ 귀가 컷신 시작 */
+function startGoHomeCutscene(){
+  stopBothPartyBgm();
+
+  // 귀가 화면 ON
+  goHomeScreen.style.display = "block";
+
+  // 🫨 캐릭터 떨림 시작
+  if (goHomePlayer) goHomePlayer.classList.add("shiver");
+
+  // 귀가 BGM 시작
+  playGoHomeBgm();
+
+  // 대사 초기화
+  goHomeIdx = 0;
+  goHomeDialogue.style.display = "flex";
+  showGoHomeLine();
+
+  // 클릭 핸들러 세팅
+  goHomeDialogue.onclick = () => {
+    // ✅ 원하는대로 "클릭할 때마다" 효과음
+    playGoHomeFirstClickSfx();
+
+    goHomeIdx++;
+
+    if (goHomeIdx >= goHomeLines.length) {
+      goHomeDialogue.style.display = "none";
+
+      // 필요하면 떨림/브금 정리
+      if (goHomePlayer) goHomePlayer.classList.remove("shiver");
+      if (goHomeBgm) goHomeBgm.pause();
+
+      location.href = "closet_dressup.html";
+      return;
+    }
+
+    showGoHomeLine();
+  };
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>드레스업 화면</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Single+Day&display=swap" rel="stylesheet">
+
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    background:#fff;
+    position:relative;
+    user-select:none;
+  }
+
+  #bgmToggle {
+    position: absolute;
+    top: 2%;
+    right: 2%;
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+    z-index: 1000; /* 항상 최상단 */
+  }
+
+  #bgmToggle img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  /* 로딩 */
+  #loadingScreen {
+    position:fixed;
+    width:100%; height:100%;
+    top:0; left:0;
+    background:url('closet back.png') no-repeat center/cover;
+    display:flex; justify-content:center; align-items:center;
+    flex-direction:column; z-index:999;
+  }
+
+  #loadingBarWrap { width:30%; height:25px; background:rgba(255,255,255,0.6); border-radius:20px; overflow:hidden; }
+
+  #loadingBar { width:0%; height:100%; background:#FF00BB; border-radius:20px; animation:fillBar 4s forwards ease-in-out; }
+
+  @keyframes fillBar { 0%{width:0%} 100%{width:100%} }
+
+  /* 드레스업 화면 */
+  #dressupScreen {
+    display:none;
+    position:relative;
+    width:100%; height:100%;
+  }
+
+  #roomBg {
+    position:absolute;
+    width:100%; height:100%;
+    top:0; left:0;
+    object-fit:cover;
+    z-index:1;
+  }
+
+  /* 옷장 */
+  #closetWrapper {
+    position: relative;
+    bottom:0%; left:66%;
+    width:46%;
+    transform:translateX(-50%);
+    z-index:5;
+    pointer-events:auto;
+  }
+
+  #closetImg {
+    width:100%;
+    display:block;
+    pointer-events:none;
+  }
+
+    /* ✅ 캐릭터+의상 고정 컨테이너 */
+  #playerWrapper{
+    position:absolute;
+    left:22%;
+    bottom:0%;
+    width:201px;              /* 기존 playerBase 폭과 동일 기준 */
+    height:700px;             /* 대략 캐릭터 전체 높이(필요시만 미세조정) */
+    transform:translateX(-50%);
+    z-index:10;
+    pointer-events:none;
+  }
+
+
+  /* 캐릭터 */
+  #playerBase {
+    position:absolute;
+    left:50%;
+    bottom:0%;
+    width:100%;
+    transform:translateX(-50%);
+    z-index:10;
+  }
+
+  /* ✅ 착용 레이어들도 wrapper 기준으로 고정 */
+  #wearWig, #wearDress, #wearTop, #wearBottom, #wearShoes, #wearAcc{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    pointer-events:none;
+  }
+
+  /* ---- 아래는 기존 너 수치를 유지하되 기준만 wrapper로 바뀜 ---- */
+  #wearWig { top:-27%; height:335px; z-index:22; }
+  #wearDress { top:-4%; height:450px; z-index:20; }
+  #wearTop { top:-4%; height:270px; z-index:20; }
+  #wearBottom { top:23%; height:440px; z-index:19; } /* ✅ 기존 'top:20'은 단위 빠져있음 */
+  #wearShoes { bottom:-2%; height:350px; z-index:18; }
+  #wearAcc { top:-6%; height:110px; z-index:21; }
+
+  /* 가발 슬롯 */
+  #wigSlot {
+    position:absolute;
+    width:100%;
+    height:180px;
+    top:18.5%;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    pointer-events:auto;
+  }
+
+  .arrowBtn {
+    width:40px; height:40px;
+    background:transparent;
+    border:none; cursor:pointer;
+    color:#F70093;
+    font-size:30px;
+    z-index:200;
+  }
+
+  .wigListWrapper {
+    width:560px; height:140px;
+    overflow:hidden; position:relative;
+    margin:0 10px;
+  }
+
+  .wigList {
+    position:absolute;
+    display:flex;
+    gap:7px;
+    left:0px;
+    transition:0.3s ease;
+    list-style:none;
+  }
+
+  .wigItem { width:130px; height:130px; position:relative; }
+  .wigSlotBg { position:absolute; width:130px; height:130px; z-index:1; }
+  .wigImg { width:120px; height:120px; position:absolute; top:5px; left:5px; cursor:pointer; z-index:5; }
+
+  /* 원피스·상의·악세사리 한 줄 */
+  #dressSlot{
+    position:absolute;
+    left:15%;   /* ← 네가 조절하면 됨 */
+    top:40%;    /* ← 임시값 */
+    width:40%;
+    display:flex;
+    z-index:60;
+  }
+
+  .dressImg {
+  width:120px;
+  margin-left:-80px;   /* ← 이것 때문에 서로 겹쳐짐! 값은 네가 조절 */
+}
+
+  #topSlot {
+    position:absolute;
+    left:28%;   /* ← 네가 조절하면 됨 */
+    top:40%;    /* ← 임시값 */
+    width:40%;
+    display:flex;
+    z-index:60;
+  }
+
+  .topImg {
+  width:120px;
+  margin-left:-50px;
+}
+
+  #accSlot {
+    position:absolute;
+    left:67%;   /* ← 네가 조절하면 됨 */
+    top:45%;    /* ← 임시값 */
+    width:20%;
+    display:flex;
+    gap:10px;
+    z-index:60;
+  }
+
+  .accImg {
+  width:120px;
+  margin-left:-35px;
+}
+
+  /* 하의·신발 한 줄 */
+  #bottomSlot {
+    position:absolute;
+    left:15%;
+    top:60%;
+    width:30%;
+    display:flex;
+    z-index:59;
+  }
+
+  .bottomImg {
+  width:110px;
+  margin-left:-10px;
+}
+
+  #shoesSlot {
+    position:absolute;
+    left:68%;
+    top:58%;
+    width:10%;
+    display:flex;
+    z-index:60;
+  }
+
+  .shoesImg {
+  width:40px;
+  max-width:100px;
+  margin-left:-50px;
+}
+
+  /* 공통 스타일 */
+  .dressImg, .topImg, .bottomImg, .shoesImg, .accImg {
+    width:120px;
+    cursor:pointer;
+  }
+
+  /* 🔹 컨트롤 버튼 (옷장 위 상단) – 새로 추가 (기존 수치 안 건드림) */
+  #controlButtons {
+    position:absolute;
+    top:100px;
+    left:-50px;
+    width:100%;
+    padding:8px 12px;
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    z-index:70;
+    pointer-events:none;
+  }
+  .controlBtn {
+    width:45px;
+    height:45px;
+    cursor:pointer;
+    pointer-events:auto;
+  }
+
+  /* 🔹 하단 외출하기 버튼(추가) */
+  #goOutWrapper {
+    position:absolute;
+    left:90%;
+    bottom:40px;
+    transform:translateX(-50%);
+    z-index:80;
+    display:none; /* 처음엔 숨김 */
+  }
+
+  #goOutButton {
+    font-family: 'Single Day', cursive;
+    width:220px;        /* 고정 너비 */
+    padding:10px 25px;
+    background:#00DDFF;          /* 하늘색 */
+    border:7px solid #C0F9F6;    /* 파란 라인 */
+    border-radius:999px;         /* 타원형 */
+    font-size:40px;
+    font-weight:1000;
+    color:#FF8BE0;
+    cursor:pointer;
+    box-shadow:0 4px 8px rgba(0,0,0,0.15);
+      text-shadow:
+    -2px  0   0 #ffffff,
+     2px  0   0 #ffffff,
+     0    2px 0 #ffffff,
+     0   -2px 0 #ffffff,
+    -2px -2px 0 #ffffff,
+     2px -2px 0 #ffffff,
+    -2px  2px 0 #ffffff,
+     2px  2px 0 #ffffff;
+  }
+
+  /* ⭐ 원빈 등장 애니메이션 */
+  @keyframes boyEnter {
+    0% {
+      opacity: 0;
+      transform: translateX(50%) translateY(20px) scale(0.98);
+      filter: blur(6px);
+    }
+    60% {
+      opacity: 1;
+      transform: translateX(50%) translateY(-6px) scale(1.02);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(50%) translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  #introBoy.enter {
+    animation: boyEnter 0.6s ease-out forwards;
+  }
+
+  /* 우측 상단 점수 박스 */
+    #scoreBox {
+      position:absolute;
+      top:40px;
+      right:140px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      z-index:200;
+    }
+
+    /* '오늘의 점수' 텍스트 이미지 */
+    #scoreTitle {
+      width:250px;  /* 필요하면 조절 */
+      margin-bottom:10px;
+    }
+
+    /* 점수창 */
+    #scoreWindow {
+      position:relative;
+      width:240px;   /* 점수창 사이즈 */
+      height:auto;
+    }
+
+    /* 점수창 배경 이미지 */
+    #scoreBg {
+      width:100%;
+      display:block;
+    }
+
+    /* 점수 숫자 */
+    #scoreNumber {
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      
+      font-family: 'Single Day', cursive;
+      font-size:70px;
+      color:#FF4ED2;
+      font-weight:900;
+
+      text-shadow:
+        -3px 0 #fff,
+         3px 0 #fff,
+         0 3px #fff,
+         0 -3px #fff,
+         2px 2px #fff,
+        -2px 2px #fff,
+         2px -2px #fff,
+        -2px -2px #fff;
+
+      pointer-events:none;
+    }
+
+    #scoreBox,
+    #speechWrapper,
+    #speechBubbleImg,
+    #speechText {
+      pointer-events: none;
+    }
+
+    #wearDress[src=""],
+    #wearTop[src=""],
+    #wearBottom[src=""],
+    #wearShoes[src=""],
+    #wearAcc[src=""],
+    #wearWig[src=""] {
+      display:none !important;
+    }
+
+    #retryButton,
+    #partyButton {
+        font-family: 'Single Day', cursive;
+        width:220px;
+        padding:10px 25px;
+        bottom:40px;        /* 화면 아래에서 40px */
+        right:40px; 
+        background:#FF7FD7;
+        border:7px solid #E300A7;
+        border-radius:999px;
+        font-size:40px;
+        font-weight:1000;
+        color:#FFFFFF;
+        cursor:pointer;
+        box-shadow:0 4px 8px rgba(0,0,0,0.15);
+        text-shadow:
+          -2px 0 #F70093,
+           2px 0 #F70093,
+           0 2px #F70093,
+           0 -2px #F70093,
+          -2px -2px #F70093,
+           2px -2px #F70093,
+          -2px 2px #F70093,
+           2px 2px #F70093;
+    }
+
+</style>
+</head>
+
+<body>
+
+<!-- 🔊 BGM 오디오 -->
+<audio id="bgm" loop>
+  <source src="sdlkfjlsdk.mp3" type="audio/mpeg">
+</audio>
+
+<!-- 🔊 BGM 토글 버튼 -->
+<div id="bgmToggle">
+  <img id="bgmIcon" src="Group 2085666441.png">
+</div>
+
+<!-- 로딩 -->
+<div id="loadingScreen">
+  <img id="loadingText" src="Loading....png">
+  <div id="loadingBarWrap"><div id="loadingBar"></div></div>
+</div>
+
+<!-- 메인 -->
+<div id="dressupScreen">
+
+  <img id="roomBg" src="Frame 2087327010.png">
+
+  <div id="closetWrapper">
+    <img id="closetImg" src="Group 2085666421.png">
+
+    <!-- 🔹 옷장 위 상단 컨트롤 버튼 -->
+    <div id="controlButtons">
+      <!-- 파일 이름은 네 이미지 이름으로 바꿔 써도 됨 -->
+      <img id="undoBtn"  class="controlBtn" src="Group 2085666422.png"  alt="undo">
+      <img id="resetBtn" class="controlBtn" src="Group 2085666424.png" alt="reset">
+    </div>
+
+    <!-- 가발 슬롯 -->
+    <div id="wigSlot">
+      <button id="leftArrow" class="arrowBtn">◀</button>
+
+      <div class="wigListWrapper">
+        <ul class="wigList" id="wigList">
+          <li class="wigItem"><img class="wigSlotBg" src="Group2085666388.png"><img class="wigImg" src="basic hair.png"></li>
+          <li class="wigItem"><img class="wigSlotBg" src="Group2085666388.png"><img class="wigImg" src="gold ponytail.png"></li>
+          <li class="wigItem"><img class="wigSlotBg" src="Group2085666388.png"><img class="wigImg" src="pink hair 2.png"></li>
+          <li class="wigItem"><img class="wigSlotBg" src="Group2085666388.png"><img class="wigImg" src="hairbun.png"></li>
+          <li class="wigItem"><img class="wigSlotBg" src="Group2085666388.png"><img class="wigImg" src="long hair.png"></li>
+          <li class="wigItem"><img class="wigSlotBg" src="Group2085666388.png"><img class="wigImg" src="red hair.png"></li>
+        </ul>
+      </div>
+
+      <button id="rightArrow" class="arrowBtn">▶</button>
+    </div>
+
+    <!-- 원피스 -->
+    <div id="dressSlot">
+      <img class="dressImg" src="dress1.png">
+      <img class="dressImg" src="dress2.png">
+    </div>
+
+    <!-- 상의 -->
+    <div id="topSlot">
+      <img class="topImg" src="top1.png">
+      <img class="topImg" src="top2.png">
+      <img class="topImg" src="top3.png">
+      <img class="topImg" src="top4.png">
+    </div>
+
+    <!-- 악세서리 -->
+    <div id="accSlot">
+      <img class="accImg" src="acc1.png">
+      <img class="accImg" src="acc2.png">
+      <img class="accImg" src="acc3.png">
+      <img class="accImg" src="acc4.png">
+    </div>
+
+    <!-- 하의 -->
+    <div id="bottomSlot">
+      <img class="bottomImg" src="bottom1.png">
+      <img class="bottomImg" src="bottom2.png">
+      <img class="bottomImg" src="bottom3.png">
+    </div>
+
+    <!-- 신발 -->
+    <div id="shoesSlot">
+      <img class="shoesImg" src="shoes1.png">
+      <img class="shoesImg" src="shoes2.png">
+      <img class="shoesImg" src="shoes3.png">
+      <img class="shoesImg" src="shoes4.png">
+    </div>
+
+  </div>
+
+  <!-- 착용 레이어 -->
+  <div id="playerWrapper">
+  <img id="playerBase" src="Group 2085666411.png">
+  <img id="wearDress">
+  <img id="wearTop">
+  <img id="wearBottom">
+  <img id="wearShoes">
+  <img id="wearAcc">
+  <img id="wearWig">
+  </div>
+
+  <!-- 🔹 외출하기 버튼 (추가) -->
+  <div id="goOutWrapper">
+    <button id="goOutButton">외출하기</button>
+  </div>
+
+  <audio id="clickSfx" src="shine-7-268909.mp3"></audio>
+  <audio id="uiBtnSfx" src="mouse-click-290204.mp3" preload="auto"></audio>
+  <audio id="scoreSfx" src="-110890.mp3" preload="auto"></audio>
+
+</div>
+
+<!-- 외출 후 화면 -->
+<div id="outScreen" style="display:none; position:relative; width:100%; height:100%;">
+
+  <!-- 새로운 배경 -->
+  <img id="outBg" src="5d5a46e4-488f-4ab1-a1ee-0d2d21d7038c 1.png"
+       style="position:absolute; width:100%; height:100%; object-fit:cover; left:0; top:0;">
+
+    <!-- ⭐ 자기소개용 소년 이미지 -->
+  <img id="introBoy"
+       src="Group 2085666447.png" 
+       style="
+         display:none;
+         position:absolute;
+         right:50%;
+         top:0%;
+         transform:translateX(50%);
+         width:450px;
+         z-index:50;
+       ">
+       
+  <!-- ⭐ 자기소개 대화창 -->
+  <div id="introDialogueBox"
+       style="
+         display:none;
+         position:absolute;
+         left:50%;
+         bottom:20px;
+         transform:translateX(-50%);
+         width:95%;
+         max-width:1400px;
+         height:200px;
+         padding:25px 30px;
+         background: linear-gradient(90deg, #FFE9FD, #ffffff);
+         border-radius:20px;
+         outline:3px dotted #E300EE;
+         outline-offset:-5px;
+         box-shadow:-2 0 10px 4px rgba(212, 0, 183, 1);
+         font-family:'Single Day', cursive;
+         cursor:pointer;
+         z-index:60;
+       ">
+    
+    <div id="introDialogueName"
+         style="
+           font-size:30px;
+           font-weight:bold;
+           color:#FFFFFF;
+           text-shadow:-3px 0 0 #E300EE,
+                        3px 0 0 #E300EE,
+                        0 -3px 0 #E300EE,
+                        0 3px 0 #E300EE,
+                        -3px -3px 0 #E300EE,
+                        -3px 3px 0 #E300EE,
+                        3px -3px 0 #E300EE,
+                        3px 3px 0 #E300EE;
+           margin-bottom:8px;
+           white-space:nowrap;
+         ">
+    </div>
+
+    <div id="introDialogueText"
+         style="
+           font-size:25px;
+           color:#FF00BB;
+           line-height:1.5;
+           white-space:normal;
+           word-break:keep-all;
+         ">
+    </div>
+
+  </div>
+
+  <!-- ⭐ 왼쪽: 여자 캐릭터 -->
+  <div id="playerOutWrapper" style="position:absolute; left:40%; bottom:0; transform:translateX(-50%); width:220px; height:600px;">
+
+    <img id="playerOutBase"
+         src="Group 2085666411.png"
+         style="position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:160px; height:700px; z-index:10;">
+
+    <img id="outWearWig"    style="position:absolute; left:50%; top:-18%; transform:translateX(-50%); z-index:22; height:270px;">
+    <img id="outWearDress"  style="position:absolute; left:50%; top:3%; transform:translateX(-50%); z-index:20; height:380px;">
+    <img id="outWearTop"    style="position:absolute; left:50%; top:3%; transform:translateX(-50%); z-index:20; height:200px;">
+    <img id="outWearBottom" style="position:absolute; left:50%; top:28%; transform:translateX(-50%); z-index:19; height:365px;">
+    <img id="outWearShoes"  style="position:absolute; left:50%; bottom:-2%; transform:translateX(-50%); z-index:18; height:270px;">
+    <img id="outWearAcc"    style="position:absolute; left:50%; top:1%; transform:translateX(-50%); z-index:21; height:110px;">
+
+  </div>
+
+    <!-- ⭐ 우측 상단 점수 박스 -->
+  <div id="scoreBox">
+    <img id="scoreTitle" src="Group 2085666358.png">
+    <div id="scoreWindow">
+      <img id="scoreBg" src="Group 2085666444.png">
+      <div id="scoreNumber">89점</div>
+    </div>
+  </div>
+
+  <!-- ⭐ 오른쪽: 남자 캐릭터 -->
+  <img id="boyBase"
+       src="boy123.png"
+       style="position:absolute; right:45%; bottom:0; transform:translateX(50%); width:260px; z-index:10;">
+
+  <!-- ⭐ 점수 말풍선 -->
+  <div id="speechWrapper"
+       style="position:absolute; right:30%; top:30%; width:200px; pointer-events:none;">
+
+      <img id="speechBubbleImg"
+           src="Union.png"
+           style="width:100%; pointer-events:none;">
+
+      <div id="speechText"
+           style="
+             position:absolute;
+             top:26%;
+             left:50%;
+             transform:translateX(-50%);
+             width:180px;
+             text-align:center;
+             font-size:25px;
+             font-weight:600;
+             color:#FFFBCB;
+             font-family: 'Single Day', cursive;
+                   text-shadow:
+        -2px 0 #FF58D5,
+         2px 0 #FF58D5,
+         0 2px #FF58D5,
+         0 -2px #FF58D5,
+         2px 2px #FF58D5,
+        -2px 2px #FF58D5,
+         2px -2px #FF58D5,
+        -2px -2px #FF58D5;
+           ">
+</div>
+</div>
+
+<!-- ⭐ 하단 버튼 박스 -->
+<div id="resultButtons" style="
+     display:none;
+     position:absolute;
+     right:40px;
+     bottom:40px;
+     gap:20px;
+     z-index:300;
+">
+  <button id="retryButton">다시 하기</button>
+  <button id="partyButton">파티 가기</button>
+</div>
+
+</div>
+
+<script>
+
+  const clickSfx = document.getElementById("clickSfx");
+  // ✅ 새 버튼 전용 효과음
+const uiBtnSfx = document.getElementById("uiBtnSfx");
+
+function playUiBtnSfx() {
+  if (!uiBtnSfx) return;
+  uiBtnSfx.currentTime = 0;
+  uiBtnSfx.play().catch(()=>{});
+}
+
+const scoreSfx = document.getElementById("scoreSfx");
+
+function playScoreSfx(startSec = 0) {
+  if (!scoreSfx) return;
+
+  const safePlay = () => {
+    const dur = isFinite(scoreSfx.duration) ? scoreSfx.duration : 999999;
+    const t = Math.max(0, Math.min(startSec, dur - 0.05));
+
+    scoreSfx.pause();
+    scoreSfx.currentTime = 2;     // ✅ startSec 반영
+    scoreSfx.play().catch(()=>{});
+  };
+
+  if (scoreSfx.readyState >= 1) safePlay();
+  else scoreSfx.addEventListener("loadedmetadata", safePlay, { once:true });
+}
+
+  /* =========================================================
+     🔊 글로벌 BGM 토글
+  ========================================================= */
+  const bgmAudio = document.getElementById('bgm');
+  const bgmToggle = document.getElementById('bgmToggle');
+  const bgmIcon = document.getElementById('bgmIcon');
+
+  let isBgmPlaying = false;
+
+  bgmToggle.addEventListener('click', () => {
+    if (isBgmPlaying) {
+      bgmAudio.pause();
+      bgmIcon.src = "Group 2085666441.png";   // 꺼진 이미지
+    } else {
+      bgmAudio.play();
+      bgmIcon.src = "Group 2085666442.png";    // 켜진 이미지
+    }
+    isBgmPlaying = !isBgmPlaying;
+  });
+
+  /* =========================================================
+       🔊 첫 상호작용에서 자동 BGM 시작 (한 번만)
+    ========================================================= */
+    function tryAutoPlayBgm() {
+      if (isBgmPlaying) return;
+
+      bgmAudio.play().then(() => {
+        isBgmPlaying = true;
+        bgmIcon.src = "Group 2085666442.png"; // 켜진 아이콘
+      }).catch(()=>{});
+
+      // 안전하게 제거
+      document.removeEventListener("pointerdown", tryAutoPlayBgm);
+      document.removeEventListener("keydown", tryAutoPlayBgm);
+      document.removeEventListener("touchstart", tryAutoPlayBgm);
+    }
+
+    // ✅ 화면 어디든 "처음" 누르면 자동 재생
+    document.addEventListener("pointerdown", tryAutoPlayBgm, { once: true });
+    document.addEventListener("keydown", tryAutoPlayBgm, { once: true });
+    document.addEventListener("touchstart", tryAutoPlayBgm, { once: true });
+
+const playerName = localStorage.getItem("playerName") || "플레이어";
+const playerTitle = localStorage.getItem("playerTitle") || "";
+
+const loadingScreen  = document.getElementById("loadingScreen");
+const dressupScreen  = document.getElementById("dressupScreen");
+
+/* 캐릭터 & 착용 레이어 요소들 */
+const playerBase  = document.getElementById("playerBase");
+const wearWig     = document.getElementById("wearWig");
+const wearDress   = document.getElementById("wearDress");
+const wearTop     = document.getElementById("wearTop");
+const wearBottom  = document.getElementById("wearBottom");
+const wearShoes   = document.getElementById("wearShoes");
+const wearAcc     = document.getElementById("wearAcc");
+
+/* 컨트롤 버튼 */
+const undoBtn  = document.getElementById("undoBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+/* 🔹 외출하기 버튼 */
+const goOutWrapper = document.getElementById("goOutWrapper");
+const goOutButton  = document.getElementById("goOutButton");
+
+// ✅ 화살표 요소 다시 선언
+const leftArrow = document.getElementById("leftArrow");
+const rightArrow = document.getElementById("rightArrow");
+const wigList = document.getElementById("wigList");
+
+// ===================================
+// 🔹 화살표 버튼 코드 (여기에 추가!)
+// ===================================
+leftArrow.addEventListener("click", () => {
+  playUiBtnSfx(); // ✅ 새 효과음
+
+  const currentLeft = parseInt(window.getComputedStyle(wigList).left) || 0;
+  wigList.style.left = (currentLeft + 50) + "px";
+});
+
+rightArrow.addEventListener("click", () => {
+  playUiBtnSfx(); // ✅ 새 효과음
+
+  const currentLeft = parseInt(window.getComputedStyle(wigList).left) || 0;
+  wigList.style.left = (currentLeft - 50) + "px";
+});
+
+setTimeout(() => {
+  loadingScreen.style.display  = "none";
+  dressupScreen.style.display  = "block";
+}, 1000);
+
+/* 히스토리 */
+let historyStack = [];
+
+function getCurrentState() {
+  return {
+    wig:    wearWig.src   || "",
+    dress:  wearDress.src || "",
+    top:    wearTop.src   || "",
+    bottom: wearBottom.src|| "",
+    shoes:  wearShoes.src || "",
+    acc:    wearAcc.src   || ""
+  };
+}
+
+function applyState(state) {
+  wearWig.src    = state.wig    || "";
+  wearDress.src  = state.dress  || "";
+  wearTop.src    = state.top    || "";
+  wearBottom.src = state.bottom || "";
+  wearShoes.src  = state.shoes  || "";
+  wearAcc.src    = state.acc    || "";
+}
+
+
+function pushHistory() {
+  historyStack.push(getCurrentState());
+}
+
+/* 로딩 완료 후 실행 */
+window.onload = () => {
+  pushHistory();
+};
+
+undoBtn.addEventListener("click", () => {
+   playUiBtnSfx();
+  if (historyStack.length <= 1) return;
+  historyStack.pop();
+  applyState(historyStack[historyStack.length - 1]);
+});
+
+resetBtn.addEventListener("click", () => {
+  playUiBtnSfx();
+  const emptyState = { wig:"", dress:"", top:"", bottom:"", shoes:"", acc:"" };
+  applyState(emptyState);
+  historyStack = [emptyState];
+});
+
+/* 드래그 */
+let dragImg=null, dragSrc="", offsetX=0, offsetY=0;
+let activeSlotId=null, activeClearFunc=null;
+
+function setupDrag(selector, targetId, clearFunc){
+  document.querySelectorAll(selector).forEach(img=>{
+    img.addEventListener("mousedown", e=>{
+      e.preventDefault();
+      dragSrc = img.src;
+
+      const rect = img.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+
+      dragImg = img.cloneNode(true);
+      dragImg.style.position="absolute";
+      dragImg.style.zIndex=999;
+      dragImg.style.left=rect.left+"px";
+      dragImg.style.top=rect.top+"px";
+      dragImg.style.pointerEvents="none";
+
+      document.body.appendChild(dragImg);
+
+      activeSlotId = targetId;
+      activeClearFunc = clearFunc || null;
+    });
+  });
+}
+
+document.addEventListener("mousemove", e=>{
+  if(!dragImg) return;
+  dragImg.style.left = (e.clientX-offsetX)+"px";
+  dragImg.style.top  = (e.clientY-offsetY)+"px";
+});
+
+document.addEventListener("mouseup", e=>{
+  if(!dragImg) return;
+
+  const R = playerBase.getBoundingClientRect();
+  const inside =
+    e.clientX>R.left && e.clientX<R.right &&
+    e.clientY>R.top  && e.clientY<R.bottom;
+
+if (inside && activeSlotId){
+    const slot=document.getElementById(activeSlotId);
+    if (slot) {
+      pushHistory();
+      if (activeClearFunc) activeClearFunc();
+      slot.src = dragSrc;
+
+      // ⭐ 착용 효과음 추가
+      if (clickSfx) {
+        clickSfx.currentTime = 0;
+        clickSfx.play().catch(()=>{});
+      }
+    }
+}
+
+  dragImg.remove();
+  dragImg=null;
+  dragSrc="";
+  activeSlotId=null;
+  activeClearFunc=null;
+});
+
+/* 적용 규칙 */
+setupDrag(".wigImg", "wearWig");
+setupDrag(".dressImg", "wearDress", ()=>{ wearTop.src=""; wearBottom.src=""; });
+setupDrag(".topImg", "wearTop", ()=>{ wearDress.src=""; });
+setupDrag(".bottomImg", "wearBottom", ()=>{ wearDress.src=""; });
+setupDrag(".shoesImg", "wearShoes");
+setupDrag(".accImg", "wearAcc");
+
+/* 외출하기 버튼 표시 */
+function updateGoOutVisibility() {
+  const hasItem =
+    (wearWig.src && wearWig.src.trim() !== "") ||
+    (wearDress.src && wearDress.src.trim() !== "") ||
+    (wearTop.src && wearTop.src.trim() !== "") ||
+    (wearBottom.src && wearBottom.src.trim() !== "") ||
+    (wearShoes.src && wearShoes.src.trim() !== "") ||
+    (wearAcc.src && wearAcc.src.trim() !== "");
+
+  goOutWrapper.style.display = hasItem ? "block" : "none";
+}
+setInterval(updateGoOutVisibility, 200);
+
+/* OUT 화면 요소 */
+const outScreen     = document.getElementById("outScreen");
+const outWearWig    = document.getElementById("outWearWig");
+const outWearDress  = document.getElementById("outWearDress");
+const outWearTop    = document.getElementById("outWearTop");
+const outWearBottom = document.getElementById("outWearBottom");
+const outWearShoes  = document.getElementById("outWearShoes");
+const outWearAcc    = document.getElementById("outWearAcc");
+
+/* ✔ 특정 옷 점수 */
+const scoreBoostItems = {
+  dress: ["dress2.png"],
+  wig: ["red hair.png"]
+};
+
+/* ✔ 점수 계산 */
+function calculateScore() {
+  let score = 30;
+  const state = getCurrentState();
+
+  for (let key in scoreBoostItems) {
+    const wearing = state[key];
+    if (!wearing) continue;
+
+    const file = wearing.split("/").pop();
+    if (scoreBoostItems[key].includes(file)) {
+      score = 70;
+    }
+  }
+  return score;
+}
+
+/* ⭐ 점수 애니메이션 */
+function animateScore(finalScore) {
+  const scoreElem = document.getElementById("scoreNumber");
+  let steps = 25;
+  let interval = 40;
+  let count = 0;
+
+  const timer = setInterval(() => {
+    count++;
+    scoreElem.innerText = Math.floor(Math.random()*100);
+
+    if (count >= steps) {
+      clearInterval(timer);
+      scoreElem.innerText = finalScore;
+    }
+  }, interval);
+}
+
+/* ⭐ 말풍선 업데이트 */
+const speechBubbleImg = document.getElementById("speechBubbleImg");
+const speechText      = document.getElementById("speechText");
+
+function updateSpeech(score) {
+  if (score >= 50) {
+    speechBubbleImg.src = "Union.png";
+    speechText.innerText = `${playerName}, 그나마 \n봐줄만하네... \n파티에 가자`;
+  }
+  else if (score <= 30) {
+    speechBubbleImg.src = "Union.png";
+    speechText.innerText = `${playerName}, 그 옷을 \n입고 파티에 \n가겠다고?`;
+  }
+  else {
+    speechBubbleImg.src = "Union.png";
+    speechText.innerText = "음… 무난한데?";
+  }
+}
+
+/* ⭐ 외출하기 */
+function goToOutScreen() {
+
+  dressupScreen.style.display="none";
+  outScreen.style.display="block";
+
+  // 기존 복사
+  outWearWig.src    = wearWig.src;
+  outWearDress.src  = wearDress.src;
+  outWearTop.src    = wearTop.src;
+  outWearBottom.src = wearBottom.src;
+  outWearShoes.src  = wearShoes.src;
+  outWearAcc.src    = wearAcc.src;
+
+  // ⭐ 점수 및 말풍선은 잠시 숨김
+  document.getElementById("scoreBox").style.display = "none";
+  document.getElementById("speechWrapper").style.display = "none";
+  document.getElementById("boyBase").style.display = "none";
+
+  // ⭐ 자기소개 이미지 + 대화창 표시
+  introBoy.classList.remove("enter"); // 안전 리셋
+  introBoy.style.display = "block";
+  requestAnimationFrame(() => {
+  introBoy.classList.add("enter");
+});
+
+  introDialogueBox.style.display = "block";
+
+  document.getElementById("playerOutWrapper").style.display = "none"; // 소녀 숨김
+  document.getElementById("playerOutBase").style.display = "none";    // 혹시 따로 있을 경우
+
+  // ⭐ 대사 내용
+  let introIndex = 0;
+
+  const introLines = [
+    { name:"???", text:`안녕 ${playerName}?` },
+    { name:"???" , text:"나는 너와 함께 파티에 갈 파트너 원빈이야" },
+    { name:"원빈", text:"나와 함께 파티에 가기 위해서는 파티의 분위기에 맞는 옷을 입어야 해" },
+    { name:"원빈", text:"음... 너의 옷이 파티 분위기에 맞는지 안 맞는지 알려줄게" },
+    { name:"원빈", text:"50점이 넘어야만 나와 함께 나갈 수 있어" }
+  ];
+
+  function renderIntro(){
+    introDialogueName.textContent = introLines[introIndex].name;
+    introDialogueText.textContent = introLines[introIndex].text;
+  }
+
+  renderIntro();
+
+  // ⭐ 클릭하면 다음 대사 → 끝나면 평가 화면 시작
+  introDialogueBox.onclick = () => {
+
+    introIndex++;
+
+    if(introIndex >= introLines.length){
+      // 소개 종료
+      introDialogueBox.style.display = "none";
+      introBoy.classList.remove("enter");
+      introBoy.style.display = "none";
+
+       // ⭐ 여기서만 소녀 다시 보여줌 (자기소개 끝난 뒤!)
+      document.getElementById("playerOutWrapper").style.display = "block";
+      document.getElementById("playerOutBase").style.display = "block";
+
+      // 기존 boy 이미지 + 점수 UI 활성화
+      document.getElementById("boyBase").style.display = "block";
+      document.getElementById("scoreBox").style.display = "block";
+      document.getElementById("speechWrapper").style.display = "block";
+
+      // 점수 계산 로직 실행
+      const score = calculateScore();
+      playScoreSfx();
+      animateScore(score);
+      updateSpeech(score);
+
+      // ⭐ 점수 결과 버튼 표시
+    resultButtons.style.display = "flex";
+
+    if (score <= 40) {
+      retryButton.style.display = "block";
+      partyButton.style.display = "none";
+    }
+    else if (score >= 50) {
+      retryButton.style.display = "none";
+      partyButton.style.display = "block";
+    } else {
+      retryButton.style.display = "none";
+      partyButton.style.display = "none";
+    }
+
+    retryButton.onclick = () => {
+      resultButtons.style.display = "none";
+      outScreen.style.display = "none";
+      dressupScreen.style.display = "block";
+    };
+
+    partyButton.onclick = () => {
+    window.location.href = "partyScene.html"; 
+    };
+
+      return;
+    }
+
+    renderIntro();
+  };
+}
+
+/* ⭐ 버튼 클릭 */
+goOutButton.addEventListener("click", () => {
+  playUiBtnSfx(); // ✅ 새 효과음
+  goToOutScreen();
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>미소녀 스타일 메이커</title>
+  <link href="https://fonts.googleapis.com/css2?family=Single+Day&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: url('main back.png') no-repeat center/cover;
+      font-family: 'Single Day', cursive;
+      position: relative;
+    }
+
+    /* 타이틀 이미지 */
+    #title {
+      position: absolute;
+      top: 15%;
+      left: 28%;
+      transform: translateX(-50%);
+      width: 700px;
+    }
+
+    /* 메인 캐릭터 */
+    #character {
+      position: absolute;
+      bottom: 0%;
+      right: 0%;
+      width: 870px;
+      transition: opacity 0.2s ease;
+    }
+    #character:hover {
+      content: url('girl wink.png');
+    }
+
+    /* 게임 시작 버튼 */
+    #startBtn {
+      position: absolute;
+      bottom: 30%;
+      left: 20%;
+      width: 250px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    #startBtn:hover {
+      content: url('Group 2085666353.png');
+      transform: scale(1.1);
+    }
+
+    /* 게임 화면 배경 */
+    #gameBg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 1s ease;
+      z-index: 1;
+    }
+
+    /* 게임 캐릭터 */
+    #gameCharacter {
+      position: absolute;
+      bottom: 10%;
+      right: 40%;
+      width: 300px;
+      opacity: 0;
+      transition: 
+        opacity 0.6s ease, 
+        transform 0.4s ease, 
+        bottom 0.7s ease,
+        left 0.7s ease;
+      cursor: pointer;
+      pointer-events: none;
+      z-index: 2;
+    }
+   
+    #gameCharacter.show{
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    /* hover 시 확대 */
+    #gameCharacter:hover {
+      transform: scale(1.1);
+    }
+
+    .noHover:hover {
+      transform: none !important;
+    }
+
+    /* show 클래스: 부드럽게 표시 */
+    .show {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    #dialogueBox {
+      position: absolute;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+
+      width: 95%;
+      max-width: 1400px;
+
+      /* ⭐ 크기 고정값(원하면 조절 가능) */
+      height: 200px;               /* 고정 높이 */
+      box-sizing: border-box;      /* padding 포함 계산 */
+
+      padding: 25px 30px;          /* 안쪽 여백 */
+
+      background: linear-gradient(90deg, #FFE9FD, #ffffff);
+      border-radius: 20px;
+      outline: 3px dotted #E300EE;
+      outline-offset: -5px;
+      box-shadow: -2 0 10px 4px rgba(212, 0, 183, 1);
+
+      font-family: 'Single Day', cursive;
+      display: none;
+      cursor: pointer;
+      z-index: 50;
+
+      /* ⭐ 텍스트가 영역 밖으로 나가지 않도록! */
+      overflow: hidden;            /* 넘치는 글자는 숨김 */
+    }
+
+    /* 이름: 그대로 예쁜 스타일 유지 */
+    #dialogueName {
+      font-size: 30px;
+      font-weight: bold;
+      color: #FFFFFF;
+      text-shadow:  -3px 0 0 #E300EE,  /* 왼쪽 */
+                     3px 0 0 #E300EE,  /* 오른쪽 */
+                     0 -3px 0 #E300EE, /* 위 */
+                     0  3px 0 #E300EE,
+                     -3px -3px 0 #E300EE,
+                     -3px 3px 0 #E300EE,
+                     3px -3px 0 #E300EE,
+                     3px 3px 0 #E300EE;
+
+      margin-bottom: 8px;
+      white-space: nowrap;         /* 이름은 줄바꿈 없이 한 줄 유지 */
+    }
+
+    /* 대사 텍스트 */
+    #dialogueText {
+      font-size: 25px;
+      color: #FF00BB;
+      line-height: 1.5;
+      
+      /* ⭐ 줄바꿈 자동 처리 */
+      white-space: normal;
+      word-break: keep-all;        /* 한국어 줄바꿈 매끄럽게 */
+    }
+
+    @keyframes shake {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      20% { transform: translate(calc(-50% - 4px), calc(-50% + 2px)) rotate(-4deg); }
+      40% { transform: translate(calc(-50% + 4px), calc(-50% - 3px)) rotate(4deg); }
+      60% { transform: translate(calc(-50% - 3px), calc(-50% + 1px)) rotate(-3deg); }
+      80% { transform: translate(calc(-50% + 2px), calc(-50% - 2px)) rotate(3deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+
+    .shake {
+      animation: shake 0.4s infinite;
+    }
+
+    /* 배경 전환용 페이드 아웃/인 */
+    .bg-fade-out {
+      opacity: 0 !important;
+      transition: opacity 0.8s ease;
+    }
+
+    .bg-fade-in {
+      opacity: 1 !important;
+      transition: opacity 0.8s ease;
+    }
+
+    /* 🔊 글로벌 BGM 토글 버튼 */
+    #bgmToggle {
+      position: fixed;
+      top: 2%;
+      right: 2%;
+      width: 100px;
+      height: 100px;
+      z-index: 9999;
+      cursor: pointer;
+    }
+
+    #bgmToggle img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+  </style>
+</head>
+
+<body>
+
+    <div id="bgmToggle">
+    <img id="bgmIcon" src="Group 2085666441.png">
+  </div>
+
+  <!-- 메인 화면 요소 -->
+  <img id="title" src="head title.png" alt="타이틀">
+  <img id="character" src="girl main.png" alt="캐릭터">
+  <img id="startBtn" src="Group 2085666352.png" alt="게임하기">
+
+  <!-- 게임 화면 요소 -->
+  <img id="gameBg" src="5d5a46e4-488f-4ab1-a1ee-0d2d21d7038c 1.png" alt="게임 배경">
+  <img id="gameCharacter" src="Group 2085666349.png" alt="게임 캐릭터">
+
+  <div id="dialogueBox">
+    <div id="dialogueName">???</div>
+    <div id="dialogueText">...</div>
+  </div>
+
+  <!-- 질문 이미지 -->
+  <img id="qImg" src="" style="display:none; position:absolute; left:50%; top:20%; transform:translateX(-50%); z-index:60;">
+
+  <!-- 언니 선택지 -->
+  <img id="choiceUnni" src="" style="display:none; position:absolute; left:33%; bottom:53%; cursor:pointer; z-index:60;">
+
+  <!-- 오빠 선택지 -->
+  <img id="choiceOppa" src="" style="display:none; position:absolute; left:33%; bottom:40%; cursor:pointer; z-index:61;">
+
+  <!-- 이름 입력 UI 이미지 -->
+  <img id="nameInputImg" src="Group 2085666393.png"
+       style="display:none; position:absolute; left:50%; bottom:400px; transform:translateX(-50%); z-index:58; cursor:pointer;">
+
+  <!-- 완료 버튼 기본 이미지 -->
+  <img id="nameDoneBtn" src="Group 2085666350.png"
+       style="display:none; position:absolute; left:50%; bottom:250px; transform:translateX(-50%); z-index:59; cursor:pointer;">
+
+  <!-- 실제 입력을 처리하는 숨겨진 input -->
+  <input id="hiddenNameInput" type="text" 
+         style="position:absolute; opacity:0; z-index:40; pointer-events:none;
+          left:50%;
+          bottom:450px;
+          width:610px;      /* 입력창 가로 크기 */
+          height:170px; 
+          transform:translateX(-50%);">
+
+  <div id="fakeNameText"
+       style="
+          display:none;
+          position:absolute;
+          left:50%;
+          bottom:460px;
+          transform:translateX(-50%);
+          z-index:95;
+          font-size:45px;
+          color:#FF00BB;
+          font-family:'Single Day', cursive;
+          pointer-events:none;
+          text-align:center;
+       ">
+  </div>
+
+  <!-- 집 안 배경 -->
+  <img id="roomBg" src="image 110569.png"
+       style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; z-index:1;">
+
+  <!-- 닫힌 편지 봉투 -->
+  <img id="letterClosed" src="image 110567.png"
+       style="display:none; position:absolute; left:50%; top:50%;
+       transform:translate(-50%,-50%); width:850px; z-index:5;">
+
+  <!-- 열린 편지 봉투 -->
+  <img id="letterOpen" src="image 110568.png"
+       style="display:none; position:absolute; left:15%; top:70%;
+       transform:translate(-50%,-50%) rotate(-6deg); width:450px; z-index:6;">
+
+  <!-- 편지지 -->
+ <div id="letterPaper"
+       style="
+          display:none;
+          position:absolute;
+          left:40%;
+          top:50%;
+          transform:translate(-50%, -50%);
+          width:720px;
+          height:1000px;    /* 너비에 맞춰 적당히 높이 조절 */
+          background-image:url('Group 2085666402.png');
+          background-size:contain;
+          background-repeat:no-repeat;
+          background-position:center;
+          z-index:7;
+       ">
+  </div>
+
+  <audio id="bgm" src="main bgm.mp3" loop></audio>
+  <audio id="clickSfx" src="shine-7-268909.mp3"></audio>
+  <audio id="newSfx" src="girl-laugh-6689.mp3"></audio>
+  <audio id="shortSfx" src="anime-cat-girl-6731.mp3"></audio>
+  <audio id="nameFinishSfx" src="mouse-click-290204.mp3"></audio>
+  <audio id="typeSfx" src="alien-talking-312011 (1).mp3"></audio>
+
+<script>
+
+    /* =========================================================
+       🔊 글로벌 BGM 토글
+    ========================================================= */
+    const bgmAudio = document.getElementById('bgm');
+    const bgmToggle = document.getElementById('bgmToggle');
+    const bgmIcon = document.getElementById('bgmIcon');
+
+    let isBgmPlaying = false;
+
+    bgmToggle.addEventListener('click', () => {
+      if (isBgmPlaying) {
+        bgmAudio.pause();
+        bgmIcon.src = "Group 2085666441.png";   // 꺼진 이미지
+      } else {
+        bgmAudio.play();
+        bgmIcon.src = "Group 2085666442.png";    // 켜진 이미지
+      }
+      isBgmPlaying = !isBgmPlaying;
+    });
+
+    /* =========================================================
+       🔊 첫 상호작용에서 자동 BGM 시작 (한 번만)
+    ========================================================= */
+    function tryAutoPlayBgm() {
+      if (isBgmPlaying) return;
+
+      bgmAudio.play().then(() => {
+        isBgmPlaying = true;
+        bgmIcon.src = "Group 2085666442.png"; // 켜진 이미지
+      }).catch(()=>{});
+
+      document.removeEventListener("pointerdown", tryAutoPlayBgm);
+      document.removeEventListener("keydown", tryAutoPlayBgm);
+      document.removeEventListener("touchstart", tryAutoPlayBgm);
+    }
+
+    document.addEventListener("pointerdown", tryAutoPlayBgm, { once: true });
+    document.addEventListener("keydown", tryAutoPlayBgm, { once: true });
+    document.addEventListener("touchstart", tryAutoPlayBgm, { once: true });
+
+    /* ======================= */
+    /* 🎃 호러 이스터에그 - 전체화면 */
+    /* ======================= */
+
+    let horrorTriggered = false;
+
+    // 5초 후 호러 이미지 플래시
+    setTimeout(() => {
+      // 이미 게임 시작했으면 실행 안 함
+      if (horrorTriggered || gameBg.classList.contains("show")) return;
+
+      horrorTriggered = true;
+
+      // 🔊 지지직거리는 노이즈 효과음
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const bufferSize = audioContext.sampleRate * 0.3; // 0.3초
+      const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+
+      // 🖼 호러 오버레이 생성 (화면 전체)
+      const horrorOverlay = document.createElement("img");
+      horrorOverlay.src = "Frame 2087327016 (1).png";  // ← 호러 이미지 파일명
+      Object.assign(horrorOverlay.style, {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "100vw",
+        height: "100vh",
+        objectFit: "cover",
+        zIndex: "9998",
+        pointerEvents: "none",
+        filter: "brightness(0.8) contrast(1.5)"
+      });
+      document.body.appendChild(horrorOverlay);
+
+      // 화면 흔들림 효과
+      document.body.style.animation = "none";
+      setTimeout(() => {
+        document.body.style.animation = "screenShake 0.15s infinite";
+      }, 10);
+
+      // 0.3초 후 호러 이미지 제거 및 복구
+      setTimeout(() => {
+        horrorOverlay.style.opacity = "0";
+        horrorOverlay.style.transition = "opacity 0.1s ease";
+        
+        setTimeout(() => {
+          horrorOverlay.remove();
+          document.body.style.animation = "none";
+        }, 100);
+      }, 300);
+
+    }, 4000);
+
+    /* 화면 흔들림 애니메이션 추가 */
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes screenShake {
+        0% { transform: translate(0, 0); }
+        25% { transform: translate(-5px, -5px); }
+        50% { transform: translate(5px, 5px); }
+        75% { transform: translate(-5px, 5px); }
+        100% { transform: translate(5px, -5px); }
+      }
+    `;
+    document.head.appendChild(style);
+
+
+    /* =========================================================
+       🎮 주요 요소
+    ========================================================= */
+    const title = document.getElementById('title');
+    const character = document.getElementById('character');
+    const startBtn = document.getElementById('startBtn');
+    const gameBg = document.getElementById('gameBg');
+    const gameCharacter = document.getElementById('gameCharacter');
+
+    const dialogueBox = document.getElementById('dialogueBox');
+    const dialogueName = document.getElementById('dialogueName');
+    const dialogueText = document.getElementById('dialogueText');
+
+    const qImg = document.getElementById("qImg");
+    const choiceUnni = document.getElementById("choiceUnni");
+    const choiceOppa = document.getElementById("choiceOppa");
+
+    const nameInputImg = document.getElementById("nameInputImg");
+    const nameDoneBtn = document.getElementById("nameDoneBtn");
+    const hiddenNameInput = document.getElementById("hiddenNameInput");
+    const fakeNameText = document.getElementById("fakeNameText");
+
+    /* 편지 요소 */
+    const letterClosed = document.getElementById("letterClosed");
+    const letterOpen = document.getElementById("letterOpen");
+    const letterPaper = document.getElementById("letterPaper");
+
+    /* =========================================================
+       🌸 플레이어 설정
+    ========================================================= */
+    let playerTitle = "";
+    let playerName = "";
+
+    /* =========================================================
+       💬 대사 데이터
+    ========================================================= */
+    const dialogue = [
+      { name: "정체 모를 소녀", text: "안녕? 만나서 반가워 :) 자기소개를 해줄래?" },
+
+      { name: "정체 모를 소녀", text: "나한테 {{title}} 가 있었다니!! 나는... 내 가족이 다 죽은 줄로만 알았거든" },
+      { name: "정체 모를 소녀", text: "이렇게 {{title}}랑 얘기할 수 있다니 나 너무 기뻐!" },
+
+      { name: "정체 모를 소녀", text: "{{title}}, 그럼 혹시... 내 이름도 예쁘게 지어줄 수 있어?" },
+
+      { name: "{{name}}", text: "고마워! 정말 마음에 들어 :)" },
+      { name: "{{name}}", text: "어서 와, {{title}}. 여기는 내가 지내던 집이야" },
+      { name: "{{name}}", text: "이제는 혼자가 아니라 '우리'의 집이기도 하지만...!" },
+      { name: "{{name}}", text: "아- 맞다. 문 틈에 우편이 잔뜩 쌓여 있어" },
+      { name: "{{name}}", text: "확인하는 걸 자꾸만 까먹지 뭐야..." }
+    ];
+
+    /* =========================================================
+       💬 편지 이후 대사
+    ========================================================= */
+    const postLetterDialogue = [
+      { name: "{{name}}", text: "우와! {{title}}, 나도 파티에 가고 싶어!" },
+      { name: "{{name}}", text: "근데… 파트너가 꼭 필요하다니…" },
+      { name: "{{name}}", text: "파트너에게 선택받기 위해서는 예쁘게 꾸며야 할 것 같아" },
+      { name: "{{name}}", text: "{{title}}, 나를 좀 도와줄 수 있어?" }
+    ];
+
+    let postIndex = 0;
+    let isPostLetterScene = false;
+    let currentDialogueIndex = 0;
+
+    /* =========================================================
+       ▶ 게임 시작
+    ========================================================= */
+    startBtn.addEventListener('click', () => {
+      title.style.display = "none";
+      character.style.display = "none";
+      startBtn.style.display = "none";
+
+      document.body.style.background = "none";
+
+      gameBg.classList.add("show");
+
+      setTimeout(() => {
+        gameCharacter.classList.add("show");
+      }, 900);
+    });
+
+    /* =========================================================
+       ▶ 첫 클릭 → 대화 시작 + 효과음(조건문 없음)
+    ========================================================= */
+    function onCharacterClick() {
+
+      if (!gameBg.classList.contains("show")) return;
+
+      // 🔊 효과음 재생 (조건 없이 바로!)
+      const clickSfx = document.getElementById("clickSfx");
+      if (clickSfx) {
+        clickSfx.currentTime = 0;
+        clickSfx.play();
+      }
+
+      // ⭐ 대화 시작
+      dialogueBox.style.display = "block";
+      currentDialogueIndex = 0;
+      renderDialogue();
+
+      // 한번 클릭한 후 hover 효과 제거
+      gameCharacter.classList.add("noHover");
+      gameCharacter.removeEventListener("click", onCharacterClick);
+    }
+
+    gameCharacter.addEventListener("click", onCharacterClick);
+
+    /* =========================================================
+       🧠 대사 렌더링
+    ========================================================= */
+    function renderDialogue() {
+      let line = dialogue[currentDialogueIndex].text;
+      let speaker = dialogue[currentDialogueIndex].name;
+
+      line = line.replace(/{{title}}/g, playerTitle);
+      line = line.replace(/{{name}}/g, playerName);
+
+      speaker = speaker.replace(/{{title}}/g, playerTitle);
+      speaker = speaker.replace(/{{name}}/g, playerName);
+
+      dialogueName.textContent = speaker;
+      dialogueText.textContent = line;
+    }
+
+
+    /* =========================================================
+       ▶ 대화 클릭 흐름 전체
+    ========================================================= */
+    let isHorrorPlaying = false;  // 🔹 이 줄을 addEventListener 바로 위에 추가!
+
+    dialogueBox.addEventListener("click", () => {
+      // 🔹 호러 영상 재생 중이면 클릭 무시
+      if (isHorrorPlaying) return;
+
+      /* 🔊 여기! — 대사 클릭할 때 재생되는 2초 짜리 효과음 넣는 자리 */
+      if (currentDialogueIndex === 1) {
+        const shortSfx = document.getElementById("shortSfx");
+        shortSfx.currentTime = 0.5;
+        shortSfx.play();
+
+        setTimeout(() => {
+          shortSfx.pause();
+          shortSfx.currentTime = 0;
+        }, 1500);
+      }
+
+      if (isPostLetterScene) {
+        showPostDialogue();
+        return;
+      }
+
+      if (currentDialogueIndex === 0) {
+        dialogueBox.style.display = "none";
+        qImg.src = "Group 2085666357.png";
+        choiceUnni.src = "Group 2085666360.png";
+        choiceOppa.src = "Group 2085666361.png";
+
+        qImg.style.display = "block";
+        choiceUnni.style.display = "block";
+        choiceOppa.style.display = "block";
+        return;
+      }
+
+      if (currentDialogueIndex === 3) {
+        dialogueBox.style.display = "none";
+        dialogueBox.style.pointerEvents = "none";
+        nameInputImg.style.display = "block";
+        nameDoneBtn.style.display = "block";
+        return;
+      }
+
+      if (currentDialogueIndex === dialogue.length - 1) {
+        showLetterScene();
+        return;
+      }
+
+      // 🔹 1번 대사 클릭 시 호러 비디오 재생 (이 부분 추가)
+      if (currentDialogueIndex === 1) {
+        triggerDialogueHorror();
+        return;
+      }
+
+      currentDialogueIndex++;
+      renderDialogue();
+    });
+
+    /* ========= 수정 위치 4 (새로 추가) ========= */
+    /* dialogueBox.addEventListener 함수가 끝난 후 (약 550줄)
+       showPostDialogue() 함수 바로 위에 이 함수를 추가하세요! */
+
+    function triggerDialogueHorror() {
+      isHorrorPlaying = true;
+      dialogueBox.style.display = "none";
+
+      const horrorSfx = new Audio("scary-horror-sound-189949 (1).mp3");
+      horrorSfx.volume = 1;
+      horrorSfx.currentTime = 1;
+      horrorSfx.play();
+
+      setTimeout(() => {
+        horrorSfx.pause();
+      }, 1700);
+
+      const horrorVideo = document.createElement("video");
+      horrorVideo.src = "kingzzang____--ar_32_--video_1_22339c0a-1185-44d4-9e17-39e313b60813_0 (1).mp4";
+      Object.assign(horrorVideo.style, {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "100vw",
+        height: "100vh",
+        objectFit: "cover",
+        zIndex: "9997",
+        pointerEvents: "none"
+      });
+      
+      horrorVideo.muted = false;
+      horrorVideo.autoplay = true;
+      document.body.appendChild(horrorVideo);
+
+      // 🔹 4초 동안 불규칙하게 깜빡거림
+      const startTime = Date.now();
+      const endTime = startTime + 1500;
+
+      function flicker() {
+        if (Date.now() > endTime) {
+          // 4초 종료 - 영상 제거
+          horrorVideo.remove();
+          isHorrorPlaying = false;
+          
+          currentDialogueIndex++;
+          renderDialogue();
+          dialogueBox.style.display = "block";
+          return;
+        }
+
+        // 🔹 불규칙한 간격으로 나타났다 사라졌다
+        const randomShowTime = Math.random() * 150 + 50;  // 100~300ms 표시
+        const randomHideTime = Math.random() * 100 + 50;   // 50~200ms 숨김
+
+        horrorVideo.style.display = "block";
+        
+        setTimeout(() => {
+          horrorVideo.style.display = "none";
+          
+          setTimeout(() => {
+            flicker();  // 재귀적으로 계속 반복
+          }, randomHideTime);
+        }, randomShowTime);
+      }
+
+      flicker();
+    }  // 🔹 함수 종료 괄호
+
+    /* =========================================================
+       🩷 선택지
+    ========================================================= */
+    function hideChoices() {
+      qImg.style.display = "none";
+      choiceUnni.style.display = "none";
+      choiceOppa.style.display = "none";
+    }
+
+    choiceUnni.addEventListener("click", () => {
+
+  const nameFinishSfx = document.getElementById("nameFinishSfx");
+  if (nameFinishSfx) {
+    nameFinishSfx.currentTime = 0;
+    nameFinishSfx.play();
+  }
+
+
+      playerTitle = "언니";
+      hideChoices();
+      dialogueBox.style.display = "block";
+      currentDialogueIndex = 1;
+      renderDialogue();
+    });
+
+      const nameFinishSfx = document.getElementById("nameFinishSfx");
+  if (nameFinishSfx) {
+    nameFinishSfx.currentTime = 0;
+    nameFinishSfx.play();
+  }
+
+    choiceOppa.addEventListener("click", () => {
+      playerTitle = "오빠";
+      hideChoices();
+      dialogueBox.style.display = "block";
+      currentDialogueIndex = 1;
+      renderDialogue();
+    });
+
+    /* =========================================================
+       🌸 이름 입력
+    ========================================================= */
+    nameInputImg.addEventListener("click", () => {
+      fakeNameText.style.display = "block";
+      hiddenNameInput.value = "";
+      fakeNameText.textContent = "";
+      hiddenNameInput.focus();
+    });
+
+    hiddenNameInput.addEventListener("input", () => {
+      fakeNameText.textContent = hiddenNameInput.value;
+    });
+
+    nameDoneBtn.addEventListener("mouseenter", () => {
+      nameDoneBtn.src = "Group 2085666351.png";
+    });
+    nameDoneBtn.addEventListener("mouseleave", () => {
+      nameDoneBtn.src = "Group 2085666350.png";
+    });
+
+    nameDoneBtn.addEventListener("click", () => {
+      const finalName = hiddenNameInput.value.trim();
+      if (!finalName) return;
+
+        /* 🔊 여기! 이름 입력 완료 효과음 */
+      const nameFinishSfx = document.getElementById("nameFinishSfx");
+      nameFinishSfx.currentTime = 0;
+      nameFinishSfx.play();
+
+        const newSfx = document.getElementById("newSfx");
+        newSfx.currentTime = 0;
+        newSfx.play();
+
+      playerName = finalName;
+
+      localStorage.setItem("playerName", playerName);
+      localStorage.setItem("playerTitle", playerTitle);
+
+      gameCharacter.style.opacity = "0";
+
+      setTimeout(() => {
+        gameCharacter.src = "Group 2085666366.png";
+        gameCharacter.style.width = "500px";
+        gameCharacter.style.bottom = "8%";
+        gameCharacter.style.right = "32%";
+      }, 50);
+
+      setTimeout(() => {
+        gameCharacter.style.opacity = "1";
+      }, 450);
+
+      fakeNameText.style.display = "none";
+      nameInputImg.style.display = "none";
+      nameDoneBtn.style.display = "none";
+
+      dialogueBox.style.pointerEvents = "auto";
+      dialogueBox.style.display = "block";
+
+      currentDialogueIndex = 4;
+      renderDialogue();
+    });
+
+    /* =========================================================
+       💌 집 내부 화면 + 편지
+    ========================================================= */
+    let letterClickCount = 0;
+    let letterTypingDone = false;
+
+    function showLetterScene() {
+      dialogueBox.style.display = "none";
+      gameCharacter.style.display = "none";
+
+      gameBg.classList.add("bg-fade-out");
+
+      setTimeout(() => {
+        gameBg.src = "image 110569.png";
+        gameBg.classList.remove("bg-fade-out");
+        gameBg.classList.add("bg-fade-in");
+      }, 400);
+
+      setTimeout(() => {
+        letterClosed.style.display = "block";
+        letterClosed.classList.add("shake");
+      }, 900);
+
+      document.body.addEventListener("click", letterClickLogic);
+    }
+
+    /* =========================================================
+       💌 편지 애니메이션 단계
+    ========================================================= */
+    function letterClickLogic() {
+      letterClickCount++;
+
+      if (letterClickCount === 4) {
+        letterClosed.classList.remove("shake");
+        letterClosed.style.opacity = "0";
+
+        letterOpen.style.display = "block";
+        letterOpen.style.opacity = "0";
+
+        setTimeout(() => {
+          letterOpen.style.transition = "opacity 0.5s ease";
+          letterOpen.style.opacity = "1";
+        }, 200);
+      }
+
+      if (letterClickCount === 5) {
+
+          // 🔊 여기! 클릭 순간 = 오디오 권한 획득 가능
+      const crackle = new Audio("alien-talking-312011 (1).mp3");
+      crackle.volume = 0;    // 소리 안 나게
+      crackle.play().catch(()=>{});
+
+      // 🔊 2) 0.5초 후 실제 볼륨으로 다시 재생
+      setTimeout(() => {
+        crackle.pause();
+        crackle.currentTime = 0;
+        crackle.volume = 1;
+        crackle.play();
+      }, 500); // ← 0.5초 뒤
+
+        letterPaper.style.display = "block";
+        letterPaper.style.opacity = "0";
+
+        setTimeout(() => {
+          letterPaper.style.transition = "opacity 0.5s ease";
+          letterPaper.style.opacity = "1";
+
+          setTimeout(() => {
+            showLetterContents();
+          }, 500);
+
+        }, 250);
+      }
+    }
+
+    /* =========================================================
+       💌 제목 + 타이핑 표시
+    ========================================================= */
+    function showLetterContents() {
+      const paper = letterPaper;
+
+      const titleImg = document.createElement("img");
+      titleImg.src = "Group 2085666403.png";
+      Object.assign(titleImg.style, {
+        width: "70%",
+        position: "absolute",
+        top: "170px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        opacity: "0",
+        transition: "opacity 1.5s ease",
+        pointerEvents: "none",
+        zIndex: "90"
+      });
+      paper.appendChild(titleImg);
+
+      const textBox = document.createElement("div");
+      Object.assign(textBox.style, {
+        position: "absolute",
+        top: "300px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "80%",
+        fontSize: "24px",
+        color: "#630095",
+        fontFamily: "'Single Day', cursive",
+        lineHeight: "1.5",
+        whiteSpace: "pre-line",
+        pointerEvents: "none",
+        zIndex: "90",
+        textAlign: "center"
+      });
+      paper.appendChild(textBox);
+
+      setTimeout(() => {
+        titleImg.style.opacity = "1";
+      }, 100);
+
+      const letterContent = [
+        { text: "당신을 매달 개최하는", style: "font-size:45px; color:#630095; font-weight:bold;" },
+        { text: "공주파티에 초대합니다", style: "font-size:45px; color:#630095; font-weight:bold;" },
+        { text: ".", style: "" },
+        { text: ".", style: "" },
+        { text: "시간: 오늘 밤 7시", style: "font-size:30px; color:#630095;" },
+        { text: "장소: 핑크빛 파티룸", style: "font-size:30px; color:#630095;" },
+        { text: "드레스 코드: 남들보다 더 예쁘게", style: "font-size:30px; color:#630095;" },
+        { text: "ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ", style: "color:#CECECE" },
+        { text: "※", style: "color:#F80000" },
+        { text: "단, 파트너가 없으면 참석할 수 없습니다.", style: "font-size:35px; color:#F80000; font-weight:bold;" }
+      ];
+
+      typeWriterParagraph(textBox, letterContent, 35);
+    }
+
+    /* =========================================================
+       📝 문단별 타이핑 효과
+    ========================================================= */
+    function typeWriterParagraph(element, paragraphList, speed) {
+      let pIndex = 0;
+      let cIndex = 0;
+
+      let currentLine = document.createElement("div");
+      currentLine.style.cssText = paragraphList[0].style;
+      element.appendChild(currentLine);
+
+      function typing() {
+
+        let line = paragraphList[pIndex].text;
+
+        if (cIndex < line.length) {
+          currentLine.textContent += line[cIndex];
+          cIndex++;
+          setTimeout(typing, speed);
+          return;
+        }
+
+        // 한 줄 끝남
+        pIndex++;
+        cIndex = 0;
+
+        // 모든 줄 끝났음 → 여기서 true
+        if (pIndex >= paragraphList.length) {
+          letterTypingDone = true;
+          return;
+        }
+
+        // 다음 줄 생성
+        currentLine = document.createElement("div");
+        currentLine.style.cssText = paragraphList[pIndex].style;
+        element.appendChild(currentLine);
+
+        setTimeout(typing, speed + 200);
+      }
+
+      typing();
+    }
+
+    /* =========================================================
+       (기존) 단순 문자열 타이핑
+    ========================================================= */
+    function typeWriter(element, text, speed) {
+      let i = 0;
+      function typing() {
+        if (i < text.length) {
+          element.textContent += text[i];
+          i++;
+          setTimeout(typing, speed);
+        }
+      }
+      typing();
+    }
+
+    /* =========================================================
+       💬 편지 클릭 → 새로운 대사 시작
+    ========================================================= */
+    letterPaper.addEventListener("click", () => {
+
+      if (!letterTypingDone) return;  // 타이핑 끝나야 다음 진행
+
+      dialogueBox.style.display = "block";
+
+      isPostLetterScene = true;
+      postIndex = 0;
+
+      showPostDialogue();
+    });
+
+    /* =========================================================
+       💬 편지 이후 대사 재생
+    ========================================================= */
+    function showPostDialogue() {
+      if (postIndex >= postLetterDialogue.length) {
+        // 🔹 모든 대사가 끝나면 버튼 표시
+        showNextSceneButton();
+        return;
+      }
+
+      let line = postLetterDialogue[postIndex].text;
+      let speaker = postLetterDialogue[postIndex].name;
+
+      line = line.replace(/{{title}}/g, playerTitle);
+      line = line.replace(/{{name}}/g, playerName);
+      speaker = speaker.replace(/{{title}}/g, playerTitle);
+      speaker = speaker.replace(/{{name}}/g, playerName);
+
+      dialogueName.textContent = speaker;
+      dialogueText.textContent = line;
+
+      postIndex++;
+    }
+
+function showNextSceneButton() {
+      // 1) 기존 화면 정리
+      dialogueBox.style.display = "none";
+      letterPaper.style.display = "none";
+      letterOpen.style.display = "none";
+      letterClosed.style.display = "none";
+
+      // 2) 버튼 만들기
+      const nextBtn = document.createElement("img");
+      nextBtn.src = "Group 2085666405.png"; // 버튼 이미지 파일명
+      Object.assign(nextBtn.style, {
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        transform: "translateX(-50%)",
+        width: "800px",
+        cursor: "pointer",
+        zIndex: "100"
+      });
+
+      document.body.appendChild(nextBtn);
+
+      // 3) 클릭하면 효과음 2개 + 호러 효과 + 파일 이동
+      nextBtn.addEventListener("click", () => {
+        // 🔊 효과음 1 - 선택 효과음
+        const nameFinishSfx = document.getElementById("nameFinishSfx");
+        if (nameFinishSfx) {
+          nameFinishSfx.currentTime = 0;
+          nameFinishSfx.play();
+        }
+
+       // 🔊 지직거리는 화이트 노이즈 효과음
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const bufferSize = audioContext.sampleRate * 0.5;
+      const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioContext.createBufferSource();
+      noise.buffer = buffer;
+      noise.connect(audioContext.destination);
+      noise.start(0);
+
+        // 🔹 호러 이미지 플래시
+        const horrorOverlay = document.createElement("img");
+        horrorOverlay.src = "Frame 2087327017 (1).png";  // 호러 이미지
+        Object.assign(horrorOverlay.style, {
+          position: "fixed",
+          top: "0",
+          left: "0",
+          width: "100vw",
+          height: "100vh",
+          objectFit: "cover",
+          zIndex: "9998",
+          pointerEvents: "none"
+        });
+        document.body.appendChild(horrorOverlay);
+
+        // 0.3초 후 제거 및 파일 이동
+        setTimeout(() => {
+          horrorOverlay.remove();
+          window.location.href = "closet.html";  // 이동할 파일 이름
+        }, 500);
+      });
+    }
+
+</script>
+
+</body>
+</html>
